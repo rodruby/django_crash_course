@@ -1,0 +1,306 @@
+{% extends "marketanalysis/base.html" %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'marketanalysis:time_adjustment' upload.pk %}" class="btn btn-outline-primary">
+        <i class="bi bi-plus"></i> New Analysis
+    </a>
+    <a href="{% url 'marketanalysis:view_analysis' upload.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Analysis
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-lg">
+    <!-- Analysis Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history"></i> Time Adjustment Results
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Analysis Details</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Property:</strong> {{ upload.address|default:"Not specified" }}</li>
+                                <li><strong>Effective Date:</strong> {{ analysis.effective_date|date:"F d, Y" }}</li>
+                                <li><strong>Analysis Date:</strong> {{ analysis.created_at|date:"F d, Y g:i A" }}</li>
+                                <li><strong>Comparable Sales:</strong> {{ comparable_sales.count }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Calculation Methods</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle text-success"></i> Monthly Median Analysis</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Linear Trendline</li>
+                                <li><i class="bi bi-check-circle text-success"></i> 4th Degree Polynomial</li>
+                                <li><i class="bi bi-info-circle text-info"></i> Both Price & Price/SF metrics</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adjustment Results Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-table"></i> Time Adjustment Results by Comparable
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th rowspan="2" class="align-middle">Comparable</th>
+                                    <th rowspan="2" class="align-middle">Sale Date</th>
+                                    <th rowspan="2" class="align-middle">Sale Price</th>
+                                    <th rowspan="2" class="align-middle">Sq Ft</th>
+                                    <th colspan="2" class="text-center border-bottom">Monthly Median</th>
+                                    <th colspan="2" class="text-center border-bottom">Linear Trend</th>
+                                    <th colspan="2" class="text-center border-bottom">Polynomial Trend</th>
+                                </tr>
+                                <tr>
+                                    <th class="text-center">Price Adj (%)</th>
+                                    <th class="text-center">PSF Adj (%)</th>
+                                    <th class="text-center">Price Adj (%)</th>
+                                    <th class="text-center">PSF Adj (%)</th>
+                                    <th class="text-center">Price Adj (%)</th>
+                                    <th class="text-center">PSF Adj (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for comp in comparable_sales %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ comp.address|default:"Comparable"|truncatechars:30 }}</strong>
+                                        {% if comp.price_per_sf %}
+                                        <br><small class="text-muted">${{ comp.price_per_sf|floatformat:0 }}/sf</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ comp.sale_date|date:"M d, Y" }}</td>
+                                    <td>${{ comp.sale_price|floatformat:0 }}</td>
+                                    <td>
+                                        {% if comp.square_footage %}
+                                        {{ comp.square_footage|floatformat:0 }}
+                                        {% else %}
+                                        <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Monthly Adjustments -->
+                                    <td class="text-center">
+                                        {% if comp.monthly_price_adjustment %}
+                                        <span class="adjustment-result {% if comp.monthly_price_adjustment >= 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                            {{ comp.monthly_price_adjustment|floatformat:2 }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if comp.monthly_psf_adjustment %}
+                                        <span class="adjustment-result {% if comp.monthly_psf_adjustment >= 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                            {{ comp.monthly_psf_adjustment|floatformat:2 }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Linear Adjustments -->
+                                    <td class="text-center">
+                                        {% if comp.linear_price_adjustment %}
+                                        <span class="adjustment-result {% if comp.linear_price_adjustment >= 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                            {{ comp.linear_price_adjustment|floatformat:2 }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if comp.linear_psf_adjustment %}
+                                        <span class="adjustment-result {% if comp.linear_psf_adjustment >= 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                            {{ comp.linear_psf_adjustment|floatformat:2 }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Polynomial Adjustments -->
+                                    <td class="text-center">
+                                        {% if comp.polynomial_price_adjustment %}
+                                        <span class="adjustment-result {% if comp.polynomial_price_adjustment >= 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                            {{ comp.polynomial_price_adjustment|floatformat:2 }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if comp.polynomial_psf_adjustment %}
+                                        <span class="adjustment-result {% if comp.polynomial_psf_adjustment >= 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                            {{ comp.polynomial_psf_adjustment|floatformat:2 }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="10" class="text-center text-muted py-4">
+                                        No comparable sales data available
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    {% if comparable_sales %}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-bar-chart"></i> Summary Statistics - Price Adjustments
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th class="text-center">Average</th>
+                                    <th class="text-center">Range</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Monthly Median</td>
+                                    <td class="text-center">
+                                        {% comment %}Calculate average of monthly price adjustments{% endcomment %}
+                                        <span class="adjustment-result">—</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <small class="text-muted">—</small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Linear Trend</td>
+                                    <td class="text-center">
+                                        <span class="adjustment-result">—</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <small class="text-muted">—</small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Polynomial Trend</td>
+                                    <td class="text-center">
+                                        <span class="adjustment-result">—</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <small class="text-muted">—</small>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Methodology Notes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled small">
+                        <li><strong>Monthly Median:</strong> Uses the median price/PSF for the month containing each date</li>
+                        <li><strong>Linear Trend:</strong> Applies linear regression to historical monthly data</li>
+                        <li><strong>Polynomial:</strong> Uses 4th-degree polynomial fit for complex market patterns</li>
+                        <li><strong>Positive %:</strong> Market appreciation from sale date to effective date</li>
+                        <li><strong>Negative %:</strong> Market depreciation from sale date to effective date</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Next Steps</h6>
+                    <p class="card-text text-muted">
+                        Review the adjustment results and consider the most appropriate methodology for your analysis.
+                    </p>
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'marketanalysis:time_adjustment' upload.pk %}" class="btn btn-primary">
+                            <i class="bi bi-plus"></i> New Time Adjustment
+                        </a>
+                        <a href="{% url 'marketanalysis:view_analysis' upload.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-graph-up"></i> View Charts
+                        </a>
+                        <button type="button" class="btn btn-outline-info" onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print Results
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate summary statistics
+    const comparables = {{ comparable_sales|length }};
+
+    if (comparables > 0) {
+        // You could add JavaScript here to calculate and display
+        // summary statistics like averages and ranges
+        console.log(`Loaded ${comparables} comparable sales with time adjustments.`);
+    }
+
+    // Add print styles
+    const printStyles = `
+        <style media="print">
+            .btn, .card-header .btn-group, .navbar { display: none !important; }
+            .card { border: 1px solid #000 !important; margin-bottom: 20px !important; }
+            .table { font-size: 12px !important; }
+            .adjustment-positive { color: #000 !important; }
+            .adjustment-negative { color: #000 !important; }
+            .adjustment-result { font-weight: bold !important; }
+        </style>
+    `;
+    document.head.insertAdjacentHTML('beforeend', printStyles);
+});
+</script>
+{% endblock %}

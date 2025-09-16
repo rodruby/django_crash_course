@@ -1,0 +1,250 @@
+{% extends "marketanalysis/base.html" %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'marketanalysis:upload' %}" class="btn btn-primary">
+        <i class="bi bi-cloud-upload"></i> Upload New Data
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-lg">
+    <div class="row">
+        <div class="col-12">
+            <!-- Summary Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">{{ uploads.count }}</h5>
+                            <p class="card-text text-muted">Total Analyses</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-success">
+                                {% for upload in uploads %}
+                                    {% if forloop.first %}{{ upload.rows_processed|default:0 }}{% endif %}
+                                {% empty %}0{% endfor %}
+                            </h5>
+                            <p class="card-text text-muted">Records in Latest</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-info">
+                                {% for upload in uploads %}
+                                    {% if upload.time_adjustments.count > 0 %}{{ upload.time_adjustments.count }}{% endif %}
+                                {% endfor %}
+                            </h5>
+                            <p class="card-text text-muted">Time Adjustments</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-warning">Active</h5>
+                            <p class="card-text text-muted">System Status</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis List -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-ul"></i> Market Analyses
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if uploads %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Property</th>
+                                    <th scope="col">Upload Date</th>
+                                    <th scope="col">Records</th>
+                                    <th scope="col">Trend Preview</th>
+                                    <th scope="col">Time Adjustments</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for upload in uploads %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ upload.address|default:"No Address" }}</strong>
+                                            {% if upload.original_filename %}
+                                            <br><small class="text-muted">{{ upload.original_filename }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            {{ upload.uploaded_at|date:"M d, Y" }}
+                                            <br><small class="text-muted">{{ upload.uploaded_at|time:"H:i" }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            {{ upload.rows_processed|default:0 }}
+                                        </span>
+                                        {% if upload.rows_excluded %}
+                                        <br><small class="text-muted">{{ upload.rows_excluded }} excluded</small>
+                                        {% endif %}
+                                    </td>
+                                    <td style="width: 200px;">
+                                        <canvas id="chart-{{ upload.pk }}" width="180" height="60"></canvas>
+                                    </td>
+                                    <td>
+                                        {% if upload.time_adjustments.count > 0 %}
+                                        <span class="badge bg-success">
+                                            {{ upload.time_adjustments.count }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'marketanalysis:view_analysis' upload.pk %}"
+                                               class="btn btn-outline-primary"
+                                               data-bs-toggle="tooltip"
+                                               title="View Analysis">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'marketanalysis:time_adjustment' upload.pk %}"
+                                               class="btn btn-outline-secondary"
+                                               data-bs-toggle="tooltip"
+                                               title="Time Adjustment">
+                                                <i class="bi bi-clock"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                    <div class="card-footer">
+                        <nav aria-label="Analysis pagination">
+                            <ul class="pagination justify-content-center mb-0">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                                </li>
+                                {% endif %}
+
+                                <li class="page-item active">
+                                    <span class="page-link">
+                                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                    </span>
+                                </li>
+
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <i class="bi bi-graph-up display-1 text-muted"></i>
+                        <h4 class="mt-3">No Market Analyses Yet</h4>
+                        <p class="text-muted">Upload your first MLS data file to get started with market analysis.</p>
+                        <a href="{% url 'marketanalysis:upload' %}" class="btn btn-primary">
+                            <i class="bi bi-cloud-upload"></i> Upload Data
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if uploads %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Create mini trend charts for each analysis
+    {% for upload in uploads %}
+    (function(){
+        const results = {{ upload.results_summary|safe }};
+        if (!results || !results.monthly_table) return;
+
+        const monthly = results.monthly_table;
+        const labels = monthly.map(r => r.year_month);
+        const medianPps = monthly.map(r => r.median_pps || null);
+
+        const ctx = document.getElementById("chart-{{ upload.pk }}").getContext("2d");
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Price per Sq Ft',
+                    data: medianPps,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 1,
+                    pointHoverRadius: 3,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return formatCurrency(context.raw) + '/sq ft';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                },
+                elements: {
+                    point: {
+                        hoverBackgroundColor: '#0d6efd'
+                    }
+                }
+            }
+        });
+    })();
+    {% endfor %}
+});
+</script>
+{% endif %}
+{% endblock %}

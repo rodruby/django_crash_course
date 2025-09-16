@@ -1,0 +1,520 @@
+{% extends "marketanalysis/base.html" %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'marketanalysis:time_adjustment' upload.pk %}" class="btn btn-outline-primary">
+        <i class="bi bi-clock"></i> Time Adjustment
+    </a>
+    <a href="{% url 'marketanalysis:analysis_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-lg">
+    <!-- Analysis Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">{{ upload.rows_processed|default:0 }}</h5>
+                    <p class="card-text text-muted">Records Processed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <h5 class="card-title text-success">
+                        {% if monthly_data %}
+                            {% for month in monthly_data %}
+                                {% if forloop.last %}${{ month.median_close|floatformat:0 }}{% endif %}
+                            {% endfor %}
+                        {% else %}N/A{% endif %}
+                    </h5>
+                    <p class="card-text text-muted">Latest Median Price</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <h5 class="card-title text-info">
+                        {% if monthly_data %}
+                            {% for month in monthly_data %}
+                                {% if forloop.last %}${{ month.median_pps|floatformat:0 }}{% endif %}
+                            {% endfor %}
+                        {% else %}N/A{% endif %}
+                    </h5>
+                    <p class="card-text text-muted">Latest Price/SF</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">{{ time_adjustments.count }}</h5>
+                    <p class="card-text text-muted">Time Adjustments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <!-- Median Price Chart -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up"></i> Median Sale Price Over Time
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price per Sq Ft Chart -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up-arrow"></i> Price per Square Foot Over Time
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="psfChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Tables Section -->
+    <div class="row mb-4">
+        <!-- Monthly Data -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-calendar-month"></i> Monthly Analysis
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Sales Count</th>
+                                    <th>Median Price</th>
+                                    <th>Median $/SF</th>
+                                    <th>Price Change</th>
+                                    <th>$/SF Change</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month in monthly_data %}
+                                <tr>
+                                    <td><strong>{{ month.year_month }}</strong></td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ month.n }}</span>
+                                    </td>
+                                    <td>${{ month.median_close|floatformat:0 }}</td>
+                                    <td>${{ month.median_pps|floatformat:0 }}</td>
+                                    <td>
+                                        {% if month.median_close_pct_change %}
+                                        <span class="adjustment-result {% if month.median_close_pct_change >= 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                            {{ month.median_close_pct_change|floatformat:2 }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if month.median_pps_pct_change %}
+                                        <span class="adjustment-result {% if month.median_pps_pct_change >= 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                            {{ month.median_pps_pct_change|floatformat:2 }}%
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">No monthly data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Yearly Summary -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-calendar-year"></i> Yearly Summary
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Year</th>
+                                    <th>Sales</th>
+                                    <th>Median Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for year in yearly_data %}
+                                <tr>
+                                    <td><strong>{{ year.year }}</strong></td>
+                                    <td>{{ year.n }}</td>
+                                    <td>${{ year.median_close|floatformat:0 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">No yearly data</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Adjustments Section -->
+    {% if time_adjustments %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history"></i> Recent Time Adjustments
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for adjustment in time_adjustments %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card border-secondary">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ adjustment.effective_date }}</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            {{ adjustment.comparable_sales.count }} comparable{{ adjustment.comparable_sales.count|pluralize }}
+                                        </small>
+                                    </p>
+                                    <a href="{% url 'marketanalysis:time_adjustment_detail' adjustment.pk %}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        View Results
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Individual Sales Section -->
+    {% if sales and sales_count < 100 %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list"></i> Individual Sales
+                        {% if sales_count > sales|length %}
+                        <small class="text-muted">(Showing first {{ sales|length }} of {{ sales_count }})</small>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>MLS #</th>
+                                    <th>Address</th>
+                                    <th>Close Date</th>
+                                    <th>Close Price</th>
+                                    <th>Sq Ft</th>
+                                    <th>Price/SF</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in sales %}
+                                <tr>
+                                    <td>{{ sale.MLSNumber|default:"—" }}</td>
+                                    <td>
+                                        {% if sale.StreetName %}
+                                        {{ sale.StreetNumberNumeric|default:"" }} {{ sale.StreetName }}
+                                        {% if sale.City %}<br><small class="text-muted">{{ sale.City }}</small>{% endif %}
+                                        {% else %}
+                                        <span class="text-muted">No address</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ sale.CloseDate|date:"M d, Y" }}</td>
+                                    <td>${{ sale.ClosePrice|floatformat:0 }}</td>
+                                    <td>
+                                        {% if sale.SqFtLivArea %}
+                                        {{ sale.SqFtLivArea|floatformat:0 }}
+                                        {% elif sale.SqFtTotal %}
+                                        {{ sale.SqFtTotal|floatformat:0 }}
+                                        {% else %}
+                                        —
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if sale.price_per_sf %}
+                                        ${{ sale.price_per_sf|floatformat:0 }}
+                                        {% else %}
+                                        —
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Chart data from Django
+    const chartData = {{ chart_data|safe }};
+
+    if (!chartData || !chartData.monthly || chartData.monthly.length === 0) {
+        // Show no data message
+        document.getElementById('priceChart').parentElement.innerHTML =
+            '<div class="text-center py-5"><p class="text-muted">No chart data available</p></div>';
+        document.getElementById('psfChart').parentElement.innerHTML =
+            '<div class="text-center py-5"><p class="text-muted">No chart data available</p></div>';
+        return;
+    }
+
+    const monthlyData = chartData.monthly;
+    const labels = monthlyData.map(d => d.year_month);
+    const medianPrices = monthlyData.map(d => d.median_close || null);
+    const medianPsf = monthlyData.map(d => d.median_pps || null);
+
+    // Common chart options
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            intersect: false,
+            mode: 'index'
+        },
+        plugins: {
+            tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: 1
+            },
+            legend: {
+                position: 'top',
+                labels: {
+                    usePointStyle: true,
+                    padding: 20
+                }
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.1)'
+                },
+                title: {
+                    display: true,
+                    text: 'Month'
+                }
+            },
+            y: {
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.1)'
+                },
+                beginAtZero: false
+            }
+        }
+    };
+
+    // Median Price Chart with Trendlines
+    const priceCtx = document.getElementById('priceChart').getContext('2d');
+    new Chart(priceCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Median Sale Price',
+                    data: medianPrices,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.2,
+                    fill: false
+                },
+                // Linear trendline
+                {
+                    label: 'Linear Trend',
+                    data: chartData.price_trendlines?.linear?.map(d => d.y) || [],
+                    borderColor: '#dc3545',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    fill: false
+                },
+                // Polynomial trendline
+                {
+                    label: 'Polynomial Trend',
+                    data: chartData.price_trendlines?.polynomial?.map(d => d.y) || [],
+                    borderColor: '#fd7e14',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [10, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatCurrency(context.raw);
+                        }
+                    }
+                }
+            },
+            scales: {
+                ...commonOptions.scales,
+                y: {
+                    ...commonOptions.scales.y,
+                    title: {
+                        display: true,
+                        text: 'Price ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Price per Sq Ft Chart with Trendlines
+    const psfCtx = document.getElementById('psfChart').getContext('2d');
+    new Chart(psfCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Median Price/SF',
+                    data: medianPsf,
+                    borderColor: '#198754',
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.2,
+                    fill: false
+                },
+                // Linear trendline
+                {
+                    label: 'Linear Trend',
+                    data: chartData.psf_trendlines?.linear?.map(d => d.y) || [],
+                    borderColor: '#dc3545',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    fill: false
+                },
+                // Polynomial trendline
+                {
+                    label: 'Polynomial Trend',
+                    data: chartData.psf_trendlines?.polynomial?.map(d => d.y) || [],
+                    borderColor: '#fd7e14',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [10, 5],
+                    pointRadius: 0,
+                    tension: 0,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatCurrency(context.raw) + '/sq ft';
+                        }
+                    }
+                }
+            },
+            scales: {
+                ...commonOptions.scales,
+                y: {
+                    ...commonOptions.scales.y,
+                    title: {
+                        display: true,
+                        text: 'Price per Sq Ft ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

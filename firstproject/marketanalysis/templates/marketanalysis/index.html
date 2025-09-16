@@ -1,0 +1,18 @@
+{% extends 'firstapp/base.html' %}
+
+{% block title %} Market Analysis {% endblock %}
+
+{% block content%}
+
+<div>
+    {{title}}  
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    // Some JavaScript that only the homepage needs
+    console.log("Homepage loaded!");
+</script>
+{% endblock extra_js %}

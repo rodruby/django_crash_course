@@ -1,0 +1,5 @@
+MLSNumber,ClosePrice,CloseDate,SqFtLivArea,SqFtTotal,StreetName,City
+MLS001,$500000,2023-01-15,2000,2200,Test Street,Test City
+MLS002,$510000,2023-02-20,1800,2000,Oak Avenue,Test City
+MLS003,$495000,2023-03-10,1900,2100,Main Street,Test City
+MLS004,$520000,2023-04-05,2100,2300,Pine Road,Test City

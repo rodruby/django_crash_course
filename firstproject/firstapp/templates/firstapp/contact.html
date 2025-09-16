@@ -1,0 +1,37 @@
+{% extends 'firstapp/base.html' %}
+
+{% block title %} Contact Page {% endblock %}
+
+{% block content%}
+<!--Display messages-->
+
+{% if messages %}
+<div class="messages">a
+    {% for message in messages %}
+
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    {% endfor %}
+</div>
+{%endif%}
+
+<!--Display contact form-->
+<div>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Submit</button>
+    </form>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    // Some JavaScript that only the homepage needs
+    console.log("Homepage loaded!");
+</script>
+{% endblock extra_js %}

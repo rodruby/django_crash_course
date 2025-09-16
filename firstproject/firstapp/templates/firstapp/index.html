@@ -1,0 +1,22 @@
+{% extends 'firstapp/base.html' %}
+
+{% block title %} Homepage {% endblock %}
+
+{% block content%}
+
+<div>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Submit</button>
+    </form>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    // Some JavaScript that only the homepage needs
+    console.log("Homepage loaded!");
+</script>
+{% endblock extra_js %}

@@ -1,0 +1,42 @@
+{% extends 'firstapp/base.html' %}
+
+{% block title %} Market Analysis {% endblock %}
+
+{% block content%}
+
+<div>
+    <h1>Upload Market Data CSV</h1>
+    
+    {% if error_message %}
+    <div class="alert alert-danger">
+        {{ error_message }}
+    </div>
+    {% endif %}
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Analyze Data</button>
+    </form>
+
+    {% if results %}
+    <h2>Analysis Results</h2>
+    <p>Processed {{ results.total_records_processed }} sales records.</p>
+
+    <h3>Median Price by Year</h3>
+    <ul>
+        {% for item in results.by_year %}
+        <li>{{ item.year }}: ${{ item.median_price|floatformat:0 }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Median Price by Month</h3>
+    <ul>
+        {% for item in results.by_month %}
+        <li>{{ item.period }}: ${{ item.median_price|floatformat:0 }}</li>
+        {% endfor %}
+    </ul> 
+    {% endif %}   
+</div>
+
+{% endblock content %}

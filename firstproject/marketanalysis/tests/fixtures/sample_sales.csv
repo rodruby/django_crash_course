@@ -1,0 +1,5 @@
+MLSNumber,StreetNumberNumeric,StreetName,City,CDOM,ListPrice,CurrentPrice,ClosePrice,PendingDate,CloseDate,SqFtTotal,SqFtLivArea,View,WaterView
+123456,10,Main St,Townsville,5,300000,290000,285000,2025-03-01,2025-03-15,1500,1200,None,No
+234567,22,Oak Ave,Townsville,10,450000,430000,425000,2025-02-01,2025-02-20,2000,1800,Water,Yes
+345678,5,Pine Rd,Othercity,0,500000,495000,492000,2025-01-15,2025-01-30,2500,2400,View,No
+
